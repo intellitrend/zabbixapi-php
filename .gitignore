@@ -1,0 +1,8 @@
+# ide eclipse, phpstorm
+.settings
+.buildpath
+.project
+.idea
+
+phpdoc
+build
