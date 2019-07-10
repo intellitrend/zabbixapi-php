@@ -1,6 +1,6 @@
-# Licence
+# License
 
-This software is licenced under the GNU Lesser General Public License v3.0.
+This software is licensed under the GNU Lesser General Public License v3.0.
 
 # Zabbix API PHP Client with session caching and SSL support
 
