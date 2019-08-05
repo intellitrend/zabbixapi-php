@@ -2,7 +2,7 @@
 /**
   * Zabbix PHP API Client (using the JSON-RPC Zabbix API)
   *
-  * @version 2.4 
+  * @version 2.5 
   * @author Wolfgang Alper <wolfgang.alper@intellitrend.de>
   * @copyright IntelliTrend GmbH, http://www.intellitrend.de
   * @license GNU Lesser General Public License v3.0
@@ -25,7 +25,7 @@
   */
 class ZabbixApi {
 
-	const VERSION = "2.4";
+	const VERSION = "2.5";
 
 	const EXCEPTION_CLASS_CODE = 1000;
 	const SESSION_PREFIX = 'zbx_';
@@ -49,7 +49,7 @@ class ZabbixApi {
 	/**
 	 * Constructor
 	 */
-	public function __construct() {		
+	public function __construct() {
 	}
 
 
@@ -332,7 +332,7 @@ class ZabbixApi {
 		}
 		$response = json_decode($rawResponse, true);
 
-		if ( isset($response['id']) && $response['id'] == 1 ) {
+		if ( isset($response['id']) && $response['id'] == 1 && isset($response['result']) ) {
 			return $response['result'];
 		}
 
