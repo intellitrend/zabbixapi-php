@@ -16,9 +16,7 @@ print "Zabbixapi library version:". $zbx->getVersion(). "\n";
 try {
 	// disable validation off certificate and host 
 	$options = array('sslVerifyPeer' => false, 'sslVerifyHost' => false);
-	$reusedSession = $zbx->login($zabUrl, $zabUser, $zabPassword, $options);
-
-	($reusedSession) ? 	print "Existing Session reused\n" : print "New Session created\n";
+	$zbx->login($zabUrl, $zabUser, $zabPassword, $options);
 
 	//this is similar to: $result = $zbx->call('apiinfo.version');
 	$result = $zbx->getApiVersion();

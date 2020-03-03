@@ -2,7 +2,7 @@
 /**
   * Zabbix PHP API Client (using the JSON-RPC Zabbix API)
   *
-  * @version 2.5 
+  * @version 2.6 
   * @author Wolfgang Alper <wolfgang.alper@intellitrend.de>
   * @copyright IntelliTrend GmbH, http://www.intellitrend.de
   * @license GNU Lesser General Public License v3.0
@@ -25,7 +25,7 @@
   */
 class ZabbixApi {
 
-	const VERSION = "2.5";
+	const VERSION = "2.6";
 
 	const EXCEPTION_CLASS_CODE = 1000;
 	const SESSION_PREFIX = 'zbx_';
@@ -48,8 +48,13 @@ class ZabbixApi {
 
 	/**
 	 * Constructor
+	 * Check for required Curl module
+	 * @throws Exception $e
 	 */
 	public function __construct() {
+		if (!function_exists('curl_init')) {
+			throw new Exception("Missing Curl support. Install the PHP Curl module.", ZabbixApi::EXCEPTION_CLASS_CODE);
+		}
 	}
 
 
@@ -60,7 +65,6 @@ class ZabbixApi {
 	 * @param string $zabUser 
 	 * @param string $zabPassword
 	 * @param array $options - optional settings. Example: array('sessionDir' => '/tmp', 'sslVerifyPeer' => true, 'useGzip' => true, 'debug' => true);
-	 * @return boolean $reusedSession - true if an existing session was reused
 	 * @throws Exception $e
 	 */
 	public function login($zabUrl, $zabUser, $zabPassword, $options = array()) {
@@ -131,20 +135,26 @@ class ZabbixApi {
 		}
 		else {
 			$this->sessionDir = sys_get_temp_dir();
-		}				
+		}
 		
 		$sessionFileName = ZabbixApi::SESSION_PREFIX. md5($this->zabUrl . $this->zabUser);
 		$this->sessionFileName = $sessionFileName;
 		$this->sessionFile = $this->sessionDir. '/'. $this->sessionFileName;
 
 		if ($this->debug) {
-			print "DBG login(). Using sessionDir:$sessionDir, sessionFileName:$sessionFileName\n";
+			print "DBG login(). Using sessionDir:$this->sessionDir, sessionFileName:$this->sessionFileName\n";
 		}
 
-		$reusedSession = $this->loadSession();
-		$this->call('user.get', array('output' => 'userid'));
-		return $reusedSession;
+		$sessionAuthKey = $this->readAuthKeyFromSession();
 
+		if ($this->debug) {
+			$this->call('user.get', array('output' => 'userid', 'limit' => 1));
+			if ($this->authKey == $sessionAuthKey) {
+				print "DBG login(). Re-Using existing session\n";
+			} else {
+				print "DBG login(). Creating new session\n";
+			}
+		}
 	}
 
 
@@ -169,7 +179,7 @@ class ZabbixApi {
 
 
 	/**
-	 * Get authKey used for API communication
+	 * Get authKey used for API communication - Supportfunction, not used internally
 	 * 
 	 * @return string $authKey
 	 */
@@ -189,7 +199,7 @@ class ZabbixApi {
 
 
 	/**
-	 * Logout from Zabbix Server and delete the authKey from filesystem
+	 * Logout from Zabbix Server and delete the session from filesystem
 	 * 
 	 * Only use this method if its really needed, because you cannot reuse the session later on.
 	 */
@@ -244,7 +254,7 @@ class ZabbixApi {
 	 */
 	public function call($method, $params = array()) {
 		if (!$this->zabUrl) {
-			throw new Exception("Not logged in. Call login() first.", ZabbixApi::EXCEPTION_CLASS_CODE);
+			throw new Exception("Missing Zabbix URL.", ZabbixApi::EXCEPTION_CLASS_CODE);
 		}
 		//try to call API with existing auth. on Error re-login and try again
 		try {
@@ -262,29 +272,6 @@ class ZabbixApi {
 
 
 	/**
-	 * Try loading a previous Session
-	 * 
-	 * @return boolean $reusedSession. True - session is reused
-	 */
-	protected function loadSession() {
-		//get authKey from session file
-		$authKey = $this->getSession();
-		if (!($authKey)) {
-			$this->authKey = $authKey;
-			if ($this->debug) {
-				print "DBG loadSession(). Loaded session from sessionFile\n";
-			}
-			return true;
-		}
-
-		if ($this->debug) {
-				print "DBG loadSession(). No valid authKey found in sessionFile or sessionfile does not exist.\n";
-		}
-		return false;
-	}
-
-
-	/**
 	 * Internal login function to perform the login. Saves authKey to sessionFile on success.
 	 * 
 	 * @return boolean $success
@@ -298,8 +285,8 @@ class ZabbixApi {
 
 		if (isset($response) && strlen($response) == 32) {
 			$this->authKey = $response;
-			//on successful login save authKey in sessionDir
-			$this->setSession();
+			//on successful login save authKey to session
+			$this->writeAuthKeyToSession();
 			return true;
 		}
 		
@@ -320,7 +307,7 @@ class ZabbixApi {
 	protected function callZabbixApi($method, $params = array()) {
 		
 		if (!$this->authKey && $method != 'user.login' && $method != 'apiinfo.version') {
-			// will be handled by call(), by executing a login - not visible to user
+			// Missing login/authKey would have been handled before by call(), by executing a login that was not visible to user
 			throw new Exception("Not logged in and no authKey", ZabbixApi::EXCEPTION_CLASS_CODE);
 		}
 		
@@ -452,25 +439,25 @@ class ZabbixApi {
    
 	
 	/**
-	 * Read authKey from session-file
+	 * Read encrypted authKey from session-file, decrpyt and save it in the class instance
 	 * 
-	 * @return string authKey. NULL if key was not found.
+	 * @return string authKey. Empty string '' if authKey was not found.
 	 */
-	protected function getSession() {
+	protected function readAuthKeyFromSession() {
 		$sessionFile = $this->getSessionFile();
 		
 		// if no session exist simply return
 		$fh = @fopen($sessionFile, "r");
 		if ($fh == false) {
 			if ($this->debug) {
-				print "DBG getSession(). sessionFile not found. sessionFile:$sessionFile\n";
+				print "DBG readAuthKeyFromSession(). sessionFile not found. sessionFile:$sessionFile\n";
 			}
-			return NULL;
+			return '';
 		}
 		
 		$encryptedKey = fread($fh, filesize($sessionFile));
 		if (!$encryptedKey) {
-			return NULL;
+			return '';
 		}
 		
 		fclose($fh);
@@ -479,27 +466,30 @@ class ZabbixApi {
 
 		if (!$authKey) {
 			if ($this->debug) {
-				print "DBG getSession(). Decrypting authKey from sessionFile failed. sessionFile:$sessionFile\n";
+				print "DBG readAuthKeyFromSession(). Decrypting authKey from sessionFile failed. sessionFile:$sessionFile\n";
 			}
+			$this->authKey = '';
 			return NULL;
 		}
 		
 
 		if ($this->debug) {
-			print "DBG getSession(). Read authKey:$authKey from sessionFile:$sessionFile\n";
+			print "DBG readAuthKeyFromSession(). Read authKey:$authKey from sessionFile:$sessionFile\n";
 		}
 		
+		// save to class instance
+		$this->authKey = $authKey;
 		return $authKey;
 	}
 
 	
 	/**
-	 * Write encryptedKey into session-file
+	 * Write authKey encrypted to the session-file
 	 * 
 	 * @return true
 	 * @throws exeception 
 	 */
-	protected function setSession() {
+	protected function writeAuthKeyToSession() {
 		//write content
 		$sessionFile = $this->getSessionFile();
 
@@ -508,16 +498,16 @@ class ZabbixApi {
 			throw new Exception("Cannot open sessionFile. sessionFile:$sessionFile", ZabbixApi::EXCEPTION_CLASS_CODE);
 		}
 
-		$encryptedKey = $this->encryptAuthKey();
+		$encryptedKey = $this->encryptAuthKey($this->authKey);
 
 		if (fwrite($fh, $encryptedKey) == false) {
-			throw new Exception("Cannot write key to sessionFile. sessionFile:$sessionFile", ZabbixApi::EXCEPTION_CLASS_CODE);
+			throw new Exception("Cannot write encrypted authKey to sessionFile. sessionFile:$sessionFile", ZabbixApi::EXCEPTION_CLASS_CODE);
 		}
 		
 		fclose($fh);
 		
 		if ($this->debug) {
-			print "DBG setSession(). Saved encrypted authKey:$encryptedKey to sessionFile:$sessionFile\n";
+			print "DBG writeAuthKeyToSession(). Saved encrypted authKey:$encryptedKey to sessionFile:$sessionFile\n";
 		}
 
 		return true;
@@ -527,36 +517,37 @@ class ZabbixApi {
 	/**
 	 * Encrypt authKey
 	 * 
+	 * @param string $authKey (plain)
 	 * @return string $encryptedKey
 	 */
-	protected function encryptAuthKey() {
-		$encryptedKey = base64_encode(openssl_encrypt(
-			$this->authKey,
+	protected function encryptAuthKey($authKey) {
+		$encryptedAuthKey = base64_encode(openssl_encrypt(
+			$authKey,
 			"aes-128-cbc",
 			hash("SHA256", $this->zabUser. $this->zabPassword, true),
 			OPENSSL_RAW_DATA,
 			"1356647968472110"
 		));
 
-		return $encryptedKey;
+		return $encryptedAuthKey;
 	}
 
 
 	/**
 	 * Decrypt authKey
 	 * 
-	 * @param string $encryptedKey
-	 * @return string $decryptedKey. If decryption fails key is empty ""
+	 * @param string $encryptedAuthKey
+	 * @return string $authKey. If decryption fails key is empty ""
 	 */
-	protected function decryptAuthKey($encryptedKey) {
-		$decryptedKey = openssl_decrypt(base64_decode($encryptedKey),
+	protected function decryptAuthKey($encryptedAuthKey) {
+		$authKey = openssl_decrypt(base64_decode($encryptedAuthKey),
 			"aes-128-cbc",
 			hash("SHA256", $this->zabUser. $this->zabPassword, true),
 			OPENSSL_RAW_DATA,
 			"1356647968472110"
 		);
 
-		return $decryptedKey;	
+		return $authKey;
 	}
 
 }

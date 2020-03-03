@@ -61,7 +61,9 @@ Sessions are stored by default in the users `tmp` directory. However there is a 
 
 # Installation
 
-The is no installation required. Simply copy the file `Zabbixapi.php` and use the class.
+There is no installation required. Simply copy the file `Zabbixapi.php` and use the class. 
+
+Note: The PHP environment **must have CURL** installed. `Zabbixapi.php` has a built-in check for curl and will throw an exception if curl is missing.
 
 ```php
 require_once "Zabbixapi.php";
@@ -95,11 +97,11 @@ Lets start with a very simple example:
 require_once "Zabbixapi.php";
 $zbx = new Zabbixapi();
 try {
-    $zbx->login('https://my.zabbixurl.com/zabbix', 'myusername', 'mypassword');
-    $result = $zbx->call('host.get', array("countOutput" => true));
-    print "Number of hosts:$result\n";
+	$zbx->login('https://my.zabbixurl.com/zabbix', 'myusername', 'mypassword');
+	$result = $zbx->call('host.get', array("countOutput" => true));
+	print "Number of hosts:$result\n";
 } catch (Exception $e) {
-    print "==== Exception ===\n";
+	print "==== Exception ===\n";
 	print 'Errorcode: '.$e->getCode()."\n";
 	print 'ErrorMessage: '.$e->getMessage()."\n";
 	exit;
@@ -117,18 +119,15 @@ $zabUrl = 'https://my.zabbixurl.com/zabbix';
 $zabUser = 'myusername';
 $zabPassword = 'mypassword';
 try {
-    $reUsedSession = $zbx->login($zabUrl, $zabUser, $zabPassword);
-    if ($reUsedSession) {
-        print "Existing Session reused\n";
-    }
-    $result = $zbx->call('hostgroup.get', array("output" => 'extend'));
-    foreach ($result as $hostGroup) {
-        $hostGroupId = $hostGroup['groupid']; 
-        $hostGroupName = $hostGroup['name']; 
-        print "groupid:$hostGroupId, hostGroupName:$hostGroupName\n";
-    }
+	$zbx->login($zabUrl, $zabUser, $zabPassword);
+	$result = $zbx->call('hostgroup.get', array("output" => 'extend'));
+	foreach ($result as $hostGroup) {
+		$hostGroupId = $hostGroup['groupid']; 
+		$hostGroupName = $hostGroup['name']; 
+		print "groupid:$hostGroupId, hostGroupName:$hostGroupName\n";
+	}
 } catch (Exception $e) {
-    print "==== Exception ===\n";
+	print "==== Exception ===\n";
 	print 'Errorcode: '.$e->getCode()."\n";
 	print 'ErrorMessage: '.$e->getMessage()."\n";
 	exit;
@@ -149,15 +148,92 @@ require_once "Zabbixapi.php";
 $zbx = new Zabbixapi();
 $options = array('sslVerifyPeer' => false, 'sslVerifyHost' => false);
 try {
-    $zbx->login('https://my.zabbixurl.com/zabbix', 'myusername', 'mypassword', $options);
-    $result = $zbx->call('host.get', array("countOutput" => true));
-    print "Number of hosts:$result\n";
+	$zbx->login('https://my.zabbixurl.com/zabbix', 'myusername', 'mypassword', $options);
+	$result = $zbx->call('host.get', array("countOutput" => true));
+	print "Number of hosts:$result\n";
 } catch (Exception $e) {
-    print "==== Exception ===\n";
+	print "==== Exception ===\n";
 	print 'Errorcode: '.$e->getCode()."\n";
 	print 'ErrorMessage: '.$e->getMessage()."\n";
 	exit;
 }
+```
+
+
+## Using filters and field selectors
+
+It is quite easy to pass filter and field selectors through the API. Basically any params defined by the Zabbix-API can be passed this way.
+
+Example - Select first 5 hosts filtered by status, maintenance_status and type and add their groups and macros.
+
+```php
+$zbx = new ZabbixApi();
+try {
+	// default is to verify certificate and hostname
+	$options = array('sslVerifyPeer' => false, 'sslVerifyHost' => false);
+	$zbx->login('https://my.zabbixurl.com/zabbix', 'myusername', 'mypassword', $options);
+
+	print "====================================================================\n";	
+	// Get hosts and other information available to this useraccount, but filtered and limited
+	$limit = 5;
+	$params = array(
+		'output' => array('hostid', 'host', 'name', 'status', 'maintenance_status', 'description'),
+		'filter' => array('status' => 0, 'maintenance_status' => 0, 'type' => 1),
+		'selectGroups' => array('groupid', 'name'),
+		'selectInterfaces' => array('interfaceid', 'main', 'type', 'useip', 'ip', 'dns', 'port'),
+		'selectInventory' => array('os', 'contact', 'location'),
+		'selectMacros' => array('macro', 'value'),
+		'limit' => $limit
+	);
+
+	$result = $zbx->call('host.get',$params);
+	print "==== Filtered hostlist with groups and macros ====\n";
+	foreach($result as $host) {		
+		printf("HostId:%d - Host:%s\n", $host['hostid'], $host['host']);
+		foreach($host['groups'] as $group) {
+			printf("    - GroupId:%d - Group:%s\n", $group['groupid'], $group['name']);
+		}
+		foreach($host['macros'] as $macro) {
+			printf("    - Macro:%s - Value:%s\n", $macro['macro'], $macro['value']);
+		}
+		
+	}
+	
+} catch (Exception $e) {
+	print "==== Exception ===\n";
+	print 'Errorcode: '.$e->getCode()."\n";
+	print 'ErrorMessage: '.$e->getMessage()."\n";
+	exit;
+}
+```
+## Debug Mode
+
+The class provides a debug mode that ouputs a lot of details. To enable, either use an option or function.
+
+Debug Option as param in login():
+
+```php
+$zbx = new ZabbixApi();
+try {
+	$options = array('sslVerifyPeer' => false, 'sslVerifyHost' => false, 'debug' => true);
+	$zbx->login('https://my.zabbixurl.com/zabbix', 'myusername', 'mypassword', $options);
+	...
+```
+Debug Function - can be used any time:
+
+```php
+# Turn debug on
+$zbx = new ZabbixApi();
+$zbx->setDebug(true);
+try {
+	$options = array('sslVerifyPeer' => false, 'sslVerifyHost' => false);
+	$zbx->login('https://my.zabbixurl.com/zabbix', 'myusername', 'mypassword', $options);
+	...
+	# Can be turned off anytime
+	$zbx->setDebug(false);
+	...
+	# And turned on again
+	$zbx->setDebug(true);
 ```
 
 # Functions reference
@@ -168,7 +244,7 @@ try {
 
 Initial login. Configures the class, loads a cached session if it exists and executes a request to the remote server to test the credentials or session.
 
-* `return` boolean $reusedSession. True if an existing session was reused.
+* `return` void
 * `throws` Exception $e. Invalid options, session issues or connection problems.
 * `param` string $zabUrl
 * `param` string $zabUser 
@@ -250,13 +326,3 @@ Get session FileName storing the encrypted authKey without path.
 Get full FileName with path.
 
 * `return` string $fileName.
-
-
-
-
-
-
-
-
-
-
