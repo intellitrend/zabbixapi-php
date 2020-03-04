@@ -1,5 +1,5 @@
 <?php
-require_once("../src/Zabbixapi.php");
+require_once("../src/ZabbixApi.php");
 
 print "Zabbix API Example\n";
 print " Connect to API and get some hostdata as list\n";
@@ -12,7 +12,7 @@ $zabUser = 'myusername';
 $zabPassword = 'mypassword';
 
 $zbx = new ZabbixApi();
-print "Zabbixapi library version:". $zbx->getVersion(). "\n";
+print "ZabbixApi library version:". $zbx->getVersion(). "\n";
 try {
 	// disable validation off certificate and host 
 	$options = array('sslVerifyPeer' => false, 'sslVerifyHost' => false);

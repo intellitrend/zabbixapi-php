@@ -2,7 +2,7 @@
 /**
   * Zabbix PHP API Client (using the JSON-RPC Zabbix API)
   *
-  * @version 2.6 
+  * @version 2.7 
   * @author Wolfgang Alper <wolfgang.alper@intellitrend.de>
   * @copyright IntelliTrend GmbH, http://www.intellitrend.de
   * @license GNU Lesser General Public License v3.0
@@ -25,7 +25,7 @@
   */
 class ZabbixApi {
 
-	const VERSION = "2.6";
+	const VERSION = "2.7";
 
 	const EXCEPTION_CLASS_CODE = 1000;
 	const SESSION_PREFIX = 'zbx_';
@@ -44,6 +44,7 @@ class ZabbixApi {
 	protected $useGzip = true;
 	protected $timeout = 30; //max. time in seconds to process request
 	protected $connectTimeout = 10; //max. time in seconds to connect to server
+	protected $authKeyIsValid= false; // wether the autkey was actually successfully used in this session
 
 
 	/**
@@ -93,7 +94,7 @@ class ZabbixApi {
 
 		if (array_key_exists('sslCaFile', $options)) {
 			if (!is_file($options['sslCaFile'])) {
-				throw new Exception("Error - sslCaFile:$sslCaFile is not a valid file", ZabbixApi::EXCEPTION_CLASS_CODE);
+				throw new Exception("Error - sslCaFile:". $options['sslCaFile']. " is not a valid file", ZabbixApi::EXCEPTION_CLASS_CODE);
 			} 
 			$this->sslCaFile = $options['sslCaFile'];
 		}
@@ -147,6 +148,7 @@ class ZabbixApi {
 
 		$sessionAuthKey = $this->readAuthKeyFromSession();
 
+		// When debug is enabled, we want to see if the session has been reused. This requires a call to the Zabbix-API.
 		if ($this->debug) {
 			$this->call('user.get', array('output' => 'userid', 'limit' => 1));
 			if ($this->authKey == $sessionAuthKey) {
@@ -180,10 +182,16 @@ class ZabbixApi {
 
 	/**
 	 * Get authKey used for API communication - Supportfunction, not used internally
-	 * 
+	 * If there was no call to the Zabbix-API before, this function will call the Zabbix-API
+	 * to ensure a valid $authKey.
 	 * @return string $authKey
 	 */
 	public function getAuthKey() {
+		// if there was no login to the Zabbix-API so far, we do not know wether the key is valid
+		if (!$this->authKeyIsValid) {
+			// Simple call that requires Authentication - will update the key if needed.
+			$this->call('user.get', array('output' => 'userid', 'limit' => 1));
+		}
 		return $this->authKey;
 	}
 
@@ -287,11 +295,13 @@ class ZabbixApi {
 			$this->authKey = $response;
 			//on successful login save authKey to session
 			$this->writeAuthKeyToSession();
+			$this->authKeyIsValid = true;
 			return true;
 		}
 		
 		// login failed
 		$this->authKey = '';
+		$this->authKeyIsValid = false;
 		return false;
 	}
 
@@ -307,7 +317,6 @@ class ZabbixApi {
 	protected function callZabbixApi($method, $params = array()) {
 		
 		if (!$this->authKey && $method != 'user.login' && $method != 'apiinfo.version') {
-			// Missing login/authKey would have been handled before by call(), by executing a login that was not visible to user
 			throw new Exception("Not logged in and no authKey", ZabbixApi::EXCEPTION_CLASS_CODE);
 		}
 		
@@ -320,6 +329,7 @@ class ZabbixApi {
 		$response = json_decode($rawResponse, true);
 
 		if ( isset($response['id']) && $response['id'] == 1 && isset($response['result']) ) {
+			$this->authKeyIsValid = true;
 			return $response['result'];
 		}
 

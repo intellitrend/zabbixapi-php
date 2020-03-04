@@ -2,6 +2,27 @@
 
 This software is licensed under the GNU Lesser General Public License v3.0.
 
+# Changelog
+
+## Version 2.7
+* BREAKING CHANGE: Classfilename renamed from `Zabbixapi.php` to `ZabbixApi.php` to match classname.
+* Call to `getAuthKey()` no longer simply returns the `authKey`. If there was no previous call to the Zabbix-API this funcion will call the Zabbix-API to ensure a valid key before returning the key.
+* Fixed error message for invalid sslCaFile.
+
+## Version 2.6
+* Public release.
+* Added check for Curl.
+* Added example for filtering and additional params passed to the Zabbix-API.
+* Call to `login()` no longer initially calls the Zabbix-API anylonger to verify the `authKey`.
+* If debug is enabled via option, or via function before calling `login()`, `login()` issues a call to the Zabbix-API to check wether the session is re-used.
+
+## Version 2.5
+* Internal release.
+
+## Version 2.4
+* Initial public release.
+
+
 # Zabbix API PHP Client with session caching and SSL support
 
 There are quite a lot of Zabbix API clients out that work really well with [Zabbix](https://www.zabbix.com). However most of them do not support `session caching` or need tweaks to work with self signed certificates.
@@ -61,12 +82,12 @@ Sessions are stored by default in the users `tmp` directory. However there is a 
 
 # Installation
 
-There is no installation required. Simply copy the file `Zabbixapi.php` and use the class. 
+There is no installation required. Simply copy the file `ZabbixApi.php` and use the class. 
 
-Note: The PHP environment **must have CURL** installed. `Zabbixapi.php` has a built-in check for curl and will throw an exception if curl is missing.
+Note: The PHP environment **must have CURL** installed. `ZabbixApi.php` has a built-in check for curl and will throw an exception if curl is missing.
 
 ```php
-require_once "Zabbixapi.php";
+require_once "ZabbixApi.php";
 $zbx = new Zabbixapi();
 ```
 
@@ -94,8 +115,8 @@ Note: One can run multiple instances at the same time, connecting with different
 Lets start with a very simple example:
 
 ```php
-require_once "Zabbixapi.php";
-$zbx = new Zabbixapi();
+require_once "ZabbixApi.php";
+$zbx = new ZabbixApi();
 try {
 	$zbx->login('https://my.zabbixurl.com/zabbix', 'myusername', 'mypassword');
 	$result = $zbx->call('host.get', array("countOutput" => true));
@@ -113,8 +134,8 @@ Basically this is all needed. The `call` method is transparent to the Zabbix API
 For example to retrieve all 'Host Groups' with all properties, we can do this:
 
 ```php
-require_once "Zabbixapi.php";
-$zbx = new Zabbixapi();
+require_once "ZabbixApi.php";
+$zbx = new ZabbixApi();
 $zabUrl = 'https://my.zabbixurl.com/zabbix';
 $zabUser = 'myusername';
 $zabPassword = 'mypassword';
@@ -144,8 +165,8 @@ Here we can use the optional `options` argument when calling `login` to setup th
 Example - Turn off SSL verification:
 
 ```php
-require_once "Zabbixapi.php";
-$zbx = new Zabbixapi();
+require_once "ZabbixApi.php";
+$zbx = new ZabbixApi();
 $options = array('sslVerifyPeer' => false, 'sslVerifyHost' => false);
 try {
 	$zbx->login('https://my.zabbixurl.com/zabbix', 'myusername', 'mypassword', $options);
@@ -242,7 +263,7 @@ try {
 
 ### login($zabUrl, $zabUser, $zabPassword, $options)
 
-Initial login. Configures the class, loads a cached session if it exists and executes a request to the remote server to test the credentials or session.
+Initial login. Configures the class and loads a cached session if it exists. It does not executes a request to the remote server to test the credentials or session at this time. This happens automatically during the first call to the Zabbix-API. One can enforce the validation by calling `getAuthKey()` after `login()`. Note: If debug is enabled via option, or via function before calling `login()`, `login()` issues a call to the Zabbix-API to check wether the session is re-used.
 
 * `return` void
 * `throws` Exception $e. Invalid options, session issues or connection problems.
@@ -262,7 +283,7 @@ Example: `array('sslVerifyPeer' => false, 'sslVerifyHost' => false);`
 
 ### call($method, $params)
 
-Execute Zabbix API call. Will automatically re-login and retry if the call failed using the current authKey read from session.
+Execute Zabbix API call. Will automatically login/re-login and retry if the call failed using the current authKey read from session.
 
 Note: Can only be called after login() was called once before at any time.
 
@@ -306,7 +327,7 @@ Get Zabbix API version from Zabbix Server.
 
 ### getAuthKey()
 
-Get authKey used for API communication
+Get authKey used for API communication. Note: If there was no previous call to the Zabbix-API, this funcion will call the Zabbix-API to ensure a valid key.
 * `return` string $authKey.
 
 ### getSessionDir()
