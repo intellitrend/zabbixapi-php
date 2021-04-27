@@ -25,7 +25,7 @@
   */
 class ZabbixApi {
 
-	const VERSION = "2.7";
+	const VERSION = "2.8";
 
 	const EXCEPTION_CLASS_CODE = 1000;
 	const SESSION_PREFIX = 'zbx_';
@@ -90,6 +90,7 @@ class ZabbixApi {
 
 		if ($this->debug) {
 			print "DBG login(). Using zabUser:$zabUser, zabUrl:$zabUrl\n";
+			print "DBG login(). Library Version:". ZabbixApi::VERSION. "\n";
 		}
 
 		if (array_key_exists('sslCaFile', $options)) {
@@ -353,8 +354,13 @@ class ZabbixApi {
 	 * @param string $method
 	 * @param mixed $params
 	 * @return string $request. Json encoded request object
+	 * @throws Exception
 	 */
-	protected function buildRequest($method, $params = array()) {	
+	protected function buildRequest($method, $params = array()) {
+		if ($params && !is_array($params)) {
+			throw new Exception("Params passed to API call must be an array", ZabbixApi::EXCEPTION_CLASS_CODE);
+		}
+		
 		$request = array(
 			'auth' => $this->authKey,
 			'method' => $method,

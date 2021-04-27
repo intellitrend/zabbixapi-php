@@ -4,6 +4,11 @@ This software is licensed under the GNU Lesser General Public License v3.0.
 
 # Changelog
 
+## Version 2.8
+* Tested with Zabbix 5.0 and 5.2.
+* Ensure that params passed to API call are an array.
+* Added library version to debug output.
+
 ## Version 2.7
 * BREAKING CHANGE: Classfilename renamed from `Zabbixapi.php` to `ZabbixApi.php` to match classname.
 * Call to `getAuthKey()` no longer simply returns the `authKey`. If there was no previous call to the Zabbix-API this funcion will call the Zabbix-API to ensure a valid key before returning the key.
@@ -33,16 +38,18 @@ This library aims to solve those problems. It supports the following features:
 * HTTPS connections with official- and self-signed certificates.
 * Works with Linux and Windows PHP implementations.
 * Multiple concurrent connections with different user accounts and/or different servers.
-* Supports Zabbix 3.0, Zabbix 3.2, Zabbix 3.4 and Zabbix 4.0.
+* Zabbix versions: 3.0, 3.2, 3.4, 4.0, 4.2, 4.4, 5.0 and 5.2.
 * No installation required.
 
 It is commercially backed up and maintained by [IntelliTrend GmbH](https://www.intellitrend.de), an official Zabbix Partner and Zabbix Training company.
+
+There was also a lightning talk [Zabbix API – the easy way](https://blog.zabbix.com/zabbix-api-the-easy-way/11748/) about using this library on the Zabbix conference 2020 in Benelux.
 
 ## Why Session caching?
 
 ### How authentication via API usally works
 
-Each time an application uses `user.login`, the Zabbix API creates a so called `AuthKey`. (See [user.login](https://www.zabbix.com/documentation/4.0/manual/api/reference/user/login)). This key is then passed via each request through the `auth` request property.
+Each time an application uses `user.login`, the Zabbix API creates a so called `AuthKey`. (See [user.login](https://www.zabbix.com/documentation/5.0/manual/api/reference/user/login)). This key is then passed via each request through the `auth` request property.
 
 In most cases, the API libary does this transparently for the user. However, if the script is called later on again (i.e by a cron job), a new `user.login` is performed, thus creating a new `AuthKey` for that new session.
 
