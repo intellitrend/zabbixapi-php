@@ -4,6 +4,8 @@ This software is licensed under the GNU Lesser General Public License v3.0.
 
 # Changelog
 
+Added more examples to filter by hostnames, hostids, hostgroupnames and hostgroupids.
+
 ## Version 2.8
 * Tested with Zabbix 5.0 and 5.2.
 * Ensure that params passed to API call are an array.
@@ -78,7 +80,7 @@ If the AuthKey becomes invalid, the libary automatically performs a new `user.lo
 
 ### How does session encryption work, what about multiple sessions?
 
-Each session has a unique name based on a hash using the `zabbixUserName` and the `zabbixUrl`. 
+Each session has a unique name based on a hash using the `zabbixUserName` and the `zabbixUrl`.
 The session itself is encrypted using the `zabbixUserName` and the `zabbixPassword`.
 
 This way, the libary can be used with different useraccounts and also different zabbix server instances.
@@ -89,7 +91,7 @@ Sessions are stored by default in the users `tmp` directory. However there is a 
 
 # Installation
 
-There is no installation required. Simply copy the file `ZabbixApi.php` and use the class. 
+There is no installation required. Simply copy the file `ZabbixApi.php` and use the class.
 
 Note: The PHP environment **must have CURL** installed. `ZabbixApi.php` has a built-in check for curl and will throw an exception if curl is missing.
 
@@ -107,13 +109,13 @@ The library makes use of `Exceptions`. There is no need to check each response v
 
 Depending on where an error occurs, different error codes are passed to the exception object, together with the message property.
 
-* `Zabbix API errors`: The original API error code and message is passed. 
+* `Zabbix API errors`: The original API error code and message is passed.
 * `Connection and SSL errors`: The original CURL error code and message is passed.
 * `Library errors`: A constant error code, as defined in the class constant EXCEPTION_CLASS_CODE, and a useful message is passed. Default=1000.
 
 ## Configuration
 
-The class is configured when calling the `login` method. Any further Zabbix API call is performed by the `call` method. 
+The class is configured when calling the `login` method. Any further Zabbix API call is performed by the `call` method.
 
 Note: One can run multiple instances at the same time, connecting with different user accounts to the same zabbix server or to another zabbix server.
 
@@ -150,8 +152,8 @@ try {
 	$zbx->login($zabUrl, $zabUser, $zabPassword);
 	$result = $zbx->call('hostgroup.get', array("output" => 'extend'));
 	foreach ($result as $hostGroup) {
-		$hostGroupId = $hostGroup['groupid']; 
-		$hostGroupName = $hostGroup['name']; 
+		$hostGroupId = $hostGroup['groupid'];
+		$hostGroupName = $hostGroup['name'];
 		print "groupid:$hostGroupId, hostGroupName:$hostGroupName\n";
 	}
 } catch (Exception $e) {
@@ -167,7 +169,7 @@ Note: This second example would not create a new session when calling `login` ag
 
 The basic example works fine, even with HTTPS, given there is a valid certificate the php installation is aware of. But what todo when using self-signed certificates?
 
-Here we can use the optional `options` argument when calling `login` to setup the SSL options. 
+Here we can use the optional `options` argument when calling `login` to setup the SSL options.
 
 Example - Turn off SSL verification:
 
@@ -201,7 +203,7 @@ try {
 	$options = array('sslVerifyPeer' => false, 'sslVerifyHost' => false);
 	$zbx->login('https://my.zabbixurl.com/zabbix', 'myusername', 'mypassword', $options);
 
-	print "====================================================================\n";	
+	print "====================================================================\n";
 	// Get hosts and other information available to this useraccount, but filtered and limited
 	$limit = 5;
 	$params = array(
@@ -216,7 +218,7 @@ try {
 
 	$result = $zbx->call('host.get',$params);
 	print "==== Filtered hostlist with groups and macros ====\n";
-	foreach($result as $host) {		
+	foreach($result as $host) {
 		printf("HostId:%d - Host:%s\n", $host['hostid'], $host['host']);
 		foreach($host['groups'] as $group) {
 			printf("    - GroupId:%d - Group:%s\n", $group['groupid'], $group['name']);
@@ -224,9 +226,9 @@ try {
 		foreach($host['macros'] as $macro) {
 			printf("    - Macro:%s - Value:%s\n", $macro['macro'], $macro['value']);
 		}
-		
+
 	}
-	
+
 } catch (Exception $e) {
 	print "==== Exception ===\n";
 	print 'Errorcode: '.$e->getCode()."\n";
@@ -275,13 +277,13 @@ Initial login. Configures the class and loads a cached session if it exists. It 
 * `return` void
 * `throws` Exception $e. Invalid options, session issues or connection problems.
 * `param` string $zabUrl
-* `param` string $zabUser 
+* `param` string $zabUser
 * `param` string $zabPassword
-* `param` array $options - optional settings. 
+* `param` array $options - optional settings.
 Example: `array('sslVerifyPeer' => false, 'sslVerifyHost' => false);`
   * `debug`: boolean - default=false. Show debug information. Also setDebug() can be used. Default is false
-  * `sessionDir`: string - default=user `tmp` directory. Directory where to store the sessions. 
-  * `sslCaFile`: string - default=use php.ini settings. Filename of external CACertBundle. Useful when using self signed certificates from internal CA. See the CURL or Mozilla websites for those bundles. 
+  * `sessionDir`: string - default=user `tmp` directory. Directory where to store the sessions.
+  * `sslCaFile`: string - default=use php.ini settings. Filename of external CACertBundle. Useful when using self signed certificates from internal CA. See the CURL or Mozilla websites for those bundles.
   * `sslVerifyPeer`: boolean - default=true. Verify certificate. Throws Exception on failure. When false, ignore any verfication errors.
   * `sslVerifyHost`: boolean - default=true. Verify Hostname against CN in  certificate. Only works if certificate can be validated. Note: If sslVerifyPeer=false but the certificate itself is valid and the hostname does not match, then sslVerifyHost=true will raise an exception.
   * `useGzip`: boolean - default=true. Use gzip compression for requests.
@@ -354,3 +356,18 @@ Get session FileName storing the encrypted authKey without path.
 Get full FileName with path.
 
 * `return` string $fileName.
+
+# Tips and Tricks
+
+## Common "get" method parameters
+
+As described in the [Zabbix-API](https://www.zabbix.com/documentation/current/manual/api/reference_commentary), there several parameter that can be added to a "get" method.
+
+Find attached a list of some less known but quite useful ones, especially `preservekeys` :
+
+| Parameter | Type | Description |
+| :-------- | :--- | :---------- |
+| countOutput | boolean | Return the number of records in the result instead of the actual data. |
+| editable | boolean | If set to true return only objects that the user has write permissions to. Default: false. |
+| limit | integer | Limit the number of records returned. |
+| preservekeys | boolean | Use IDs as keys in the resulting array. |
