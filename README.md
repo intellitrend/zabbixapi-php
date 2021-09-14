@@ -4,7 +4,17 @@ This software is licensed under the GNU Lesser General Public License v3.0.
 
 # Changelog
 
-Added more examples to filter by hostnames, hostids, hostgroupnames and hostgroupids.
+## Version 3.0.1
+
+* Tested with Zabbix 5.0 - 5.4.
+* Added support for Zabbix 5.4 API change in `user.login` method.
+* Added namespace `IntelliTrend\Zabbix`.
+* Added [composer](https://getcomposer.org/) support.
+* Moved to [semver](https://semver.org/) version numbers.
+
+## No version change
+
+* Added more examples to filter by hostnames, hostids, hostgroupnames and hostgroupids.
 
 ## Version 2.8
 * Tested with Zabbix 5.0 and 5.2.
@@ -40,7 +50,7 @@ This library aims to solve those problems. It supports the following features:
 * HTTPS connections with official- and self-signed certificates.
 * Works with Linux and Windows PHP implementations.
 * Multiple concurrent connections with different user accounts and/or different servers.
-* Zabbix versions: 3.0, 3.2, 3.4, 4.0, 4.2, 4.4, 5.0 and 5.2.
+* Zabbix versions: 3.0, 3.2, 3.4, 4.0, 4.2, 4.4, 5.0, 5.2 and 5.4.
 * No installation required.
 
 It is commercially backed up and maintained by [IntelliTrend GmbH](https://www.intellitrend.de), an official Zabbix Partner and Zabbix Training company.

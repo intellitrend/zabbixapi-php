@@ -1,0 +1,27 @@
+{
+    "name": "intellitrend/zabbixapi",
+    "description": "Zabbix API client for PHP with session cache and SSL management",
+    "type": "library",
+    "require": {
+        "php": ">=5.6",
+        "ext-curl": "*"
+    },
+    "license": "LGPL-3.0",
+    "authors": [
+        {
+            "name": "IntelliTrend",
+            "email": "support@intellitrend.de",
+            "homepage": "https://www.intellitrend.de"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/intellitrend/zabbixapi-php/issues",
+        "docs": "https://github.com/intellitrend/zabbixapi-php"
+    },
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-4": {
+            "IntelliTrend\\Zabbix\\": "/src"
+        }
+    }
+}
