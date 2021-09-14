@@ -4,6 +4,11 @@ This software is licensed under the GNU Lesser General Public License v3.0.
 
 # Changelog
 
+## Version 3.0.2
+
+* Fixed bug in getApiVersion() with invalid credentials.
+* Added example and documentation using composer. See `examples/composer`.
+
 ## Version 3.0.1
 
 * Tested with Zabbix 5.0 - 5.4.
@@ -17,16 +22,19 @@ This software is licensed under the GNU Lesser General Public License v3.0.
 * Added more examples to filter by hostnames, hostids, hostgroupnames and hostgroupids.
 
 ## Version 2.8
+
 * Tested with Zabbix 5.0 and 5.2.
 * Ensure that params passed to API call are an array.
 * Added library version to debug output.
 
 ## Version 2.7
+
 * BREAKING CHANGE: Classfilename renamed from `Zabbixapi.php` to `ZabbixApi.php` to match classname.
 * Call to `getAuthKey()` no longer simply returns the `authKey`. If there was no previous call to the Zabbix-API this funcion will call the Zabbix-API to ensure a valid key before returning the key.
 * Fixed error message for invalid sslCaFile.
 
 ## Version 2.6
+
 * Public release.
 * Added check for Curl.
 * Added example for filtering and additional params passed to the Zabbix-API.
@@ -34,11 +42,12 @@ This software is licensed under the GNU Lesser General Public License v3.0.
 * If debug is enabled via option, or via function before calling `login()`, `login()` issues a call to the Zabbix-API to check wether the session is re-used.
 
 ## Version 2.5
+
 * Internal release.
 
 ## Version 2.4
-* Initial public release.
 
+* Initial public release.
 
 # Zabbix API PHP Client with session caching and SSL support
 
@@ -75,7 +84,7 @@ Assume we have a set of 10 API scripts that run every hour. This means we will c
 
 Everytime a request hits the Zabbix frontend, either per webbrowser or as a JSON RPC API request, Zabbix has to verify the request against the existing sessions. The more sessions to verify, the longer this will take.
 
-Note: We have seen installations with millions of sessions, where frontend access slowed down considerable by 15sec+ per request.  Keep in mind that for example the dashboard not only performs one request, but multiple requests depending on the number of widgets used.
+> **Note:** We have seen installations with millions of sessions, where frontend access slowed down considerable by 15sec+ per request.  Keep in mind that for example the dashboard not only performs one request, but multiple requests depending on the number of widgets used.
 
 So the best is to `reuse` a session, until it expires. This is where session caching steps in.
 
@@ -86,7 +95,6 @@ When a new session is created, the AuthKey is saved encrypted to disk. This is s
 So to follow up the example given before: Calling a script using session-caching, even over a month, will create just `1` session.
 
 If the AuthKey becomes invalid, the libary automatically performs a new `user.login`, re-executes the failed request and updates the stored session. All of this happens in the background, the user of the libary has not to deal with it.
-
 
 ### How does session encryption work, what about multiple sessions?
 
@@ -101,15 +109,29 @@ Sessions are stored by default in the users `tmp` directory. However there is a 
 
 # Installation
 
-There is no installation required. Simply copy the file `ZabbixApi.php` and use the class.
+> **Note:** The PHP environment **must have CURL** installed. `ZabbixApi.php` has a built-in check for curl and will throw an exception if curl is missing.
 
-Note: The PHP environment **must have CURL** installed. `ZabbixApi.php` has a built-in check for curl and will throw an exception if curl is missing.
+## Without using composer
+
+There is no installation required. Simply copy the file `ZabbixApi.php` and use the class.
 
 ```php
 require_once "ZabbixApi.php";
+
 $zbx = new Zabbixapi();
 ```
 
+## Using composer
+
+```php
+require('vendor/autoload.php');
+
+use IntelliTrend\Zabbix\ZabbixApi;
+
+$zbx = new Zabbixapi();
+```
+
+See `examples/composer` for a full example with details.
 
 # Usage
 
@@ -127,7 +149,7 @@ Depending on where an error occurs, different error codes are passed to the exce
 
 The class is configured when calling the `login` method. Any further Zabbix API call is performed by the `call` method.
 
-Note: One can run multiple instances at the same time, connecting with different user accounts to the same zabbix server or to another zabbix server.
+> **Note:** One can run multiple instances at the same time, connecting with different user accounts to the same zabbix server or to another zabbix server.
 
 ## Basic usage
 
@@ -173,7 +195,8 @@ try {
 	exit;
 }
 ```
-Note: This second example would not create a new session when calling `login` again after the first example. It would reuse the session from the previous example. `login` returns true when an existing session was found.
+
+> **Note:** This second example would not create a new session when calling `login` again after the first example. It would reuse the session from the previous example. `login` returns true when an existing session was found.
 
 ## Advanced usage and SSL Options
 
@@ -198,7 +221,6 @@ try {
 	exit;
 }
 ```
-
 
 ## Using filters and field selectors
 
@@ -246,6 +268,7 @@ try {
 	exit;
 }
 ```
+
 ## Debug Mode
 
 The class provides a debug mode that ouputs a lot of details. To enable, either use an option or function.
@@ -259,6 +282,7 @@ try {
 	$zbx->login('https://my.zabbixurl.com/zabbix', 'myusername', 'mypassword', $options);
 	...
 ```
+
 Debug Function - can be used any time:
 
 ```php
@@ -282,7 +306,9 @@ try {
 
 ### login($zabUrl, $zabUser, $zabPassword, $options)
 
-Initial login. Configures the class and loads a cached session if it exists. It does not executes a request to the remote server to test the credentials or session at this time. This happens automatically during the first call to the Zabbix-API. One can enforce the validation by calling `getAuthKey()` after `login()`. Note: If debug is enabled via option, or via function before calling `login()`, `login()` issues a call to the Zabbix-API to check wether the session is re-used.
+Initial login. Configures the class and loads a cached session if it exists. It does not executes a request to the remote server to test the credentials or session at this time. This happens automatically during the first call to the Zabbix-API. One can enforce the validation by calling `getAuthKey()` after `login()`.
+
+> **Note:** If debug is enabled via option, or via function before calling `login()`, `login()` issues a call to the Zabbix-API to check wether the session is re-used.
 
 * `return` void
 * `throws` Exception $e. Invalid options, session issues or connection problems.
@@ -295,7 +321,9 @@ Example: `array('sslVerifyPeer' => false, 'sslVerifyHost' => false);`
   * `sessionDir`: string - default=user `tmp` directory. Directory where to store the sessions.
   * `sslCaFile`: string - default=use php.ini settings. Filename of external CACertBundle. Useful when using self signed certificates from internal CA. See the CURL or Mozilla websites for those bundles.
   * `sslVerifyPeer`: boolean - default=true. Verify certificate. Throws Exception on failure. When false, ignore any verfication errors.
-  * `sslVerifyHost`: boolean - default=true. Verify Hostname against CN in  certificate. Only works if certificate can be validated. Note: If sslVerifyPeer=false but the certificate itself is valid and the hostname does not match, then sslVerifyHost=true will raise an exception.
+  * `sslVerifyHost`: boolean - default=true. Verify Hostname against CN in  certificate. Only works if certificate can be validated.
+
+  > **Note:** If sslVerifyPeer=false but the certificate itself is valid and the hostname does not match, then sslVerifyHost=true will raise an exception.
   * `useGzip`: boolean - default=true. Use gzip compression for requests.
   * `connectTimeout`: integer - default=10. Max. time in seconds to connect to server.
   * `timeout`: default=30. Max. time in seconds to process request.
@@ -304,7 +332,7 @@ Example: `array('sslVerifyPeer' => false, 'sslVerifyHost' => false);`
 
 Execute Zabbix API call. Will automatically login/re-login and retry if the call failed using the current authKey read from session.
 
-Note: Can only be called after login() was called once before at any time.
+> **Note:** Can only be called after login() was called once before at any time.
 
 * `return` mixed $reusedSession. Decoded Json response from API call or a scalar. See Zabbix API documentation for details.
 * `throws` Exception $e. API Error, Session issues or connection problems.
@@ -315,7 +343,7 @@ Note: Can only be called after login() was called once before at any time.
 
 Logout from Zabbix Server and also delete the authKey from filesystem.
 
-Only use this method if its really needed, because you cannot reuse the session later on.
+> **Note:** Only use this method if its really needed, because the session cannot be reused later on.
 
 * `return` void
 * `throws` Exception $e. API Error, Session issues or connection problems
@@ -337,7 +365,9 @@ Get version of this library.
 
 ### getApiVersion()
 
-Get Zabbix API version from Zabbix Server.
+Get Zabbix API version from Zabbix Server. Also useful to check wether the Zabbix Api url is valid.
+
+> **Note:** Prefer this function over `call('apiinfo.version')`, because it does not try to authenticate and stores the Zabbix Api version for further requests.
 
 * `return` string $version. Uses API method 'apiinfo.version'.
 * `throws` Exception $e. API Error, Session issues or connection problems
@@ -346,7 +376,10 @@ Get Zabbix API version from Zabbix Server.
 
 ### getAuthKey()
 
-Get authKey used for API communication. Note: If there was no previous call to the Zabbix-API, this funcion will call the Zabbix-API to ensure a valid key.
+Get authKey used for API communication.
+
+> **Note:** If there was no previous call to the Zabbix-API, this funcion will call the Zabbix-API to ensure a valid authkey.
+
 * `return` string $authKey.
 
 ### getSessionDir()
@@ -371,7 +404,7 @@ Get full FileName with path.
 
 ## Common "get" method parameters
 
-As described in the [Zabbix-API](https://www.zabbix.com/documentation/current/manual/api/reference_commentary), there several parameter that can be added to a "get" method.
+As described in the [Zabbix-Api](https://www.zabbix.com/documentation/current/manual/api/reference_commentary), there several parameter that can be added to a "get" method.
 
 Find attached a list of some less known but quite useful ones, especially `preservekeys` :
 

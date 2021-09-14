@@ -2,7 +2,7 @@
 /**
   * Zabbix PHP API Client (using the JSON-RPC Zabbix API)
   *
-  * @version 3.0.1
+  * @version 3.0.2
   * @author Wolfgang Alper <wolfgang.alper@intellitrend.de>
   * @copyright IntelliTrend GmbH, http://www.intellitrend.de
   * @license GNU Lesser General Public License v3.0
@@ -29,7 +29,7 @@ namespace IntelliTrend\Zabbix;
 
 class ZabbixApi {
 
-	const VERSION = "3.0.1";
+	const VERSION = "3.0.2";
 
 	const EXCEPTION_CLASS_CODE = 1000;
 	const SESSION_PREFIX = 'zbx_';
@@ -172,7 +172,7 @@ class ZabbixApi {
 	 * @return string $apiVersion
 	 */
 	public function getApiVersion() {
-		$this->zabApiVersion = $this->call('apiinfo.version');
+		$this->zabApiVersion = $this->callZabbixApi('apiinfo.version');
 		return $this->zabApiVersion;
 	}
 

@@ -1,0 +1,12 @@
+{
+    "name": "zabbix-api/demo",
+    "description": "",
+    "require": {
+        "intellitrend/zabbixapi": "@dev"
+    },
+    "autoload": {
+        "psr-4": {
+            "IntelliTrend\\Zabbix\\": "/src"
+        }
+    }
+}

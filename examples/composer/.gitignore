@@ -1,0 +1,12 @@
+# ide eclipse, phpstorm
+.settings
+.buildpath
+.project
+.idea
+
+phpdoc
+build
+
+vendor
+composer.phar
+composer.lock
