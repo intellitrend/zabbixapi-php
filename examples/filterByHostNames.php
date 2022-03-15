@@ -1,4 +1,5 @@
 <?php
+namespace IntelliTrend\Zabbix;
 require_once("../src/ZabbixApi.php");
 
 print "Zabbix API Example - Filter by Hostnames\n";
