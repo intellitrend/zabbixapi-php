@@ -1,6 +1,7 @@
 <?php
-namespace IntelliTrend\Zabbix;
 require_once("../src/ZabbixApi.php");
+
+use IntelliTrend\Zabbix\ZabbixApi;
 
 print "Zabbix API Example - Filter by Hostnames\n";
 print " Connect to API, check certificate/hostname and get number of hosts\n";

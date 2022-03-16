@@ -4,6 +4,12 @@ This software is licensed under the GNU Lesser General Public License v3.0.
 
 # Changelog
 
+## Version 3.1.0
+
+* Tested with Zabbix 6.0.
+* Added missing namespace in examples.
+* Added function `loginToken()` to log in via API tokens.
+
 ## Version 3.0.2
 
 * Fixed bug in getApiVersion() with invalid credentials.
@@ -59,7 +65,7 @@ This library aims to solve those problems. It supports the following features:
 * HTTPS connections with official- and self-signed certificates.
 * Works with Linux and Windows PHP implementations.
 * Multiple concurrent connections with different user accounts and/or different servers.
-* Zabbix versions: 3.0, 3.2, 3.4, 4.0, 4.2, 4.4, 5.0, 5.2 and 5.4.
+* Zabbix versions: 3.0, 3.2, 3.4, 4.0, 4.2, 4.4, 5.0, 5.2, 5.4 and 6.0.
 * No installation required.
 
 It is commercially backed up and maintained by [IntelliTrend GmbH](https://www.intellitrend.de), an official Zabbix Partner and Zabbix Training company.
@@ -79,6 +85,8 @@ Zabbix keeps those session, until a session expired or is logged out. You can ch
 This means, any created session (if there is no logout) will be kept for 365 days.
 
 Assume we have a set of 10 API scripts that run every hour. This means we will create `10 x 24 = 240` sessions per day. Using more scripts or a smaller interval will of cause increase this number.
+
+**Note**: Zabbix 5.4 and later support API auth tokens, which won't create sessions when used. Therefore, no session management is required on the client side, either.
 
 ### The problem with many sessions in the session table
 
@@ -118,7 +126,9 @@ There is no installation required. Simply copy the file `ZabbixApi.php` and use 
 ```php
 require_once "ZabbixApi.php";
 
-$zbx = new Zabbixapi();
+use IntelliTrend\Zabbix\ZabbixApi;
+
+$zbx = new ZabbixApi();
 ```
 
 ## Using composer
@@ -128,7 +138,7 @@ require('vendor/autoload.php');
 
 use IntelliTrend\Zabbix\ZabbixApi;
 
-$zbx = new Zabbixapi();
+$zbx = new ZabbixApi();
 ```
 
 See `examples/composer` for a full example with details.
@@ -157,6 +167,7 @@ Lets start with a very simple example:
 
 ```php
 require_once "ZabbixApi.php";
+use IntelliTrend\Zabbix\ZabbixApi;
 $zbx = new ZabbixApi();
 try {
 	$zbx->login('https://my.zabbixurl.com/zabbix', 'myusername', 'mypassword');
@@ -172,10 +183,29 @@ try {
 
 Basically this is all needed. The `call` method is transparent to the Zabbix API definition. It takes 2 parameter: `$method` and `$params` as specified for the particular Zabbix API method.
 
+Instead of a login with a user name and password, you can also use an API token in Zabbix 5.4+:
+
+```php
+require_once "ZabbixApi.php";
+use IntelliTrend\Zabbix\ZabbixApi;
+$zbx = new ZabbixApi();
+try {
+	$zbx->loginToken('https://my.zabbixurl.com/zabbix', '123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234');
+	$result = $zbx->call('host.get', array("countOutput" => true));
+	print "Number of hosts:$result\n";
+} catch (Exception $e) {
+	print "==== Exception ===\n";
+	print 'Errorcode: '.$e->getCode()."\n";
+	print 'ErrorMessage: '.$e->getMessage()."\n";
+	exit;
+}
+```
+
 For example to retrieve all 'Host Groups' with all properties, we can do this:
 
 ```php
 require_once "ZabbixApi.php";
+use IntelliTrend\Zabbix\ZabbixApi;
 $zbx = new ZabbixApi();
 $zabUrl = 'https://my.zabbixurl.com/zabbix';
 $zabUser = 'myusername';
@@ -208,6 +238,7 @@ Example - Turn off SSL verification:
 
 ```php
 require_once "ZabbixApi.php";
+use IntelliTrend\Zabbix\ZabbixApi;
 $zbx = new ZabbixApi();
 $options = array('sslVerifyPeer' => false, 'sslVerifyHost' => false);
 try {
@@ -229,6 +260,8 @@ It is quite easy to pass filter and field selectors through the API. Basically a
 Example - Select first 5 hosts filtered by status, maintenance_status and type and add their groups and macros.
 
 ```php
+require_once "ZabbixApi.php";
+use IntelliTrend\Zabbix\ZabbixApi;
 $zbx = new ZabbixApi();
 try {
 	// default is to verify certificate and hostname
@@ -328,6 +361,18 @@ Example: `array('sslVerifyPeer' => false, 'sslVerifyHost' => false);`
   * `connectTimeout`: integer - default=10. Max. time in seconds to connect to server.
   * `timeout`: default=30. Max. time in seconds to process request.
 
+### loginToken($zabUrl, $zabToken, $options)
+
+Alternative login method using an API token, which is set directly as auth token. Options are the same as for `login()`.
+
+Since session management is not required with API tokens, no cached sessions are loaded or saved.
+
+* `return` void
+* `throws` Exception $e. Invalid options, session issues or connection problems.
+* `param` string $zabUrl
+* `param` string $zabToken
+* `param` array $options - optional settings.
+
 ### call($method, $params)
 
 Execute Zabbix API call. Will automatically login/re-login and retry if the call failed using the current authKey read from session.
@@ -343,7 +388,7 @@ Execute Zabbix API call. Will automatically login/re-login and retry if the call
 
 Logout from Zabbix Server and also delete the authKey from filesystem.
 
-> **Note:** Only use this method if its really needed, because the session cannot be reused later on.
+> **Note:** Only use this method if its really needed, because the session cannot be reused later on. Logouts on API object created with an API token have no effect.
 
 * `return` void
 * `throws` Exception $e. API Error, Session issues or connection problems

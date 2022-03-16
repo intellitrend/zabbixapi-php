@@ -14,12 +14,15 @@ print "=====================================================\n";
 $zabUrl ='https://my.zabbixurl.com/zabbix';
 $zabUser = 'myusername';
 $zabPassword = 'mypassword';
+// $zabToken = '123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234';
 
 $zbx = new ZabbixApi();
 try {
 	// $zbx->setDebug(true);
 	// default is to verify certificate and hostname
 	$zbx->login($zabUrl, $zabUser, $zabPassword);
+	// loginToken() accepts API tokens as an alternative to login()
+	// $zbx->loginToken($zabUrl, $zabToken);
 	// this is similar to: $result = $zbx->call('apiinfo.version');
 	$result = $zbx->getApiVersion();
 	print "Remote Zabbix API Version:$result\n";

@@ -2,7 +2,7 @@
 /**
   * Zabbix PHP API Client (using the JSON-RPC Zabbix API)
   *
-  * @version 3.0.2
+  * @version 3.1.0
   * @author Wolfgang Alper <wolfgang.alper@intellitrend.de>
   * @copyright IntelliTrend GmbH, http://www.intellitrend.de
   * @license GNU Lesser General Public License v3.0
@@ -29,7 +29,7 @@ namespace IntelliTrend\Zabbix;
 
 class ZabbixApi {
 
-	const VERSION = "3.0.2";
+	const VERSION = "3.1.0";
 
 	const EXCEPTION_CLASS_CODE = 1000;
 	const SESSION_PREFIX = 'zbx_';
@@ -48,7 +48,8 @@ class ZabbixApi {
 	protected $useGzip = true;
 	protected $timeout = 30; //max. time in seconds to process request
 	protected $connectTimeout = 10; //max. time in seconds to connect to server
-	protected $authKeyIsValid = false; // wether the autkey was actually successfully used in this session
+	protected $authKeyIsValid = false; // whether the autkey was actually successfully used in this session
+	protected $authKeyIsToken = false; // whether the autkey is a token and therefore not bound to a session
 	protected $zabApiVersion = ''; // Zabbix API version. Updated when calling getApiVersion() or on first _login() attempt. Needed for API change in 5.4 (user -> username)
 
 
@@ -67,9 +68,9 @@ class ZabbixApi {
 	/**
 	 * Login - setup internal structure and validate sessionDir
 	 *
-	 * @param string $zabUrl
-	 * @param string $zabUser
-	 * @param string $zabPassword
+	 * @param string $zabUrl - Zabbix base URL
+	 * @param string $zabUser - Zabbix user name
+	 * @param string $zabPassword - Zabbix password
 	 * @param array $options - optional settings. Example: array('sessionDir' => '/tmp', 'sslVerifyPeer' => true, 'useGzip' => true, 'debug' => true);
 	 * @throws Exception $e
 	 */
@@ -81,55 +82,9 @@ class ZabbixApi {
 		$this->zabUser = $zabUser;
 		$this->zabPassword = $zabPassword;
 
-		$validOptions = array('debug', 'sessionDir', 'sslCaFile', 'sslVerifyHost', 'sslVerifyPeer', 'useGzip', 'timeout', 'connectTimeout');
-		foreach ($options as $k => $v) {
-			if (!in_array($k, $validOptions)) {
-				throw new \Exception("Invalid option used. option:$k", ZabbixApi::EXCEPTION_CLASS_CODE);
-			}
-		}
+		$this->applyOptions($options);
 
-
-		if (array_key_exists('debug', $options)) {
-			$this->debug = $options['debug'] && true;
-		}
-
-		if ($this->debug) {
-			print "DBG login(). Using zabUser:$zabUser, zabUrl:$zabUrl\n";
-			print "DBG login(). Library Version:". ZabbixApi::VERSION. "\n";
-		}
-
-		if (array_key_exists('sslCaFile', $options)) {
-			if (!is_file($options['sslCaFile'])) {
-				throw new \Exception("Error - sslCaFile:". $options['sslCaFile']. " is not a valid file", ZabbixApi::EXCEPTION_CLASS_CODE);
-			}
-			$this->sslCaFile = $options['sslCaFile'];
-		}
-
-		if (array_key_exists('sslVerifyPeer', $options)) {
-			$this->sslVerifyPeer = ($options['sslVerifyPeer']) ? 1 : 0;
-		}
-
-		if (array_key_exists('sslVerifyHost', $options)) {
-			$this->sslVerifyHost = ($options['sslVerifyHost']) ? 2 : 0;
-		}
-
-		if (array_key_exists('useGzip', $options)) {
-			$this->useGzip = ($options['useGzip']) ? true : false;
-		}
-
-		if (array_key_exists('timeout', $options)) {
-			$this->timeout = (intval($options['timeout']) > 0)? $options['timeout'] : 30;
-		}
-
-		if (array_key_exists('connectTimeout', $options)) {
-			$this->timeout = (intval($options['connectTimeout']) > 0)? $options['connectTimeout'] : 30;
-		}
-
-		if ($this->debug) {
-			print "DBG login(). Using sslVerifyPeer:". $this->sslVerifyPeer . " sslVerifyHost:". $this->sslVerifyHost. " useGzip:". $this->useGzip. " timeout:". $this->timeout. " connectTimeout:". $this->connectTimeout. "\n";
-		}
-
-		// if sessionDir is passed as param check if a directory exists. otherwise ise the default temp directory
+		// if sessionDir is passed as param check if a directory exists. otherwise use the default temp directory
 		if (array_key_exists('sessionDir', $options)) {
 			$sessionDir = $options['sessionDir'];
 			if (!is_dir($sessionDir)) {
@@ -165,6 +120,36 @@ class ZabbixApi {
 		}
 	}
 
+	/**
+	 * Login - setup internal structure via API token
+	 *
+	 * @param string $zabUrl - Zabbix base URL
+	 * @param string $zabToken - Zabbix API token
+	 * @param array $options - optional settings. Example: array('sessionDir' => '/tmp', 'sslVerifyPeer' => true, 'useGzip' => true, 'debug' => true);
+	 * @throws Exception $e
+	 */
+	public function loginToken($zabUrl, $zabToken, $options = array()) {
+
+		$zabUrl = substr($zabUrl , -1) == '/' ? $zabUrl :  $zabUrl .= '/';
+		$this->zabUrl = $zabUrl;
+
+		// login fields are unused with tokens
+		$this->zabUser = '';
+		$this->zabPassword = '';
+
+		$this->applyOptions($options);
+
+		// session files are also not required
+		$this->sessionDir = '';
+		$this->sessionFileName = '';
+		$this->sessionFile = '';
+
+		// use token directly as auth key
+		$this->authKey = $zabToken;
+		$this->authKeyIsValid = true;
+		$this->authKeyIsToken = true;
+	}
+
 
 	/**
 	 * Convenient function to get remote API version
@@ -195,7 +180,7 @@ class ZabbixApi {
 	 */
 	public function getAuthKey() {
 		// if there was no login to the Zabbix-API so far, we do not know wether the key is valid
-		if (!$this->authKeyIsValid) {
+		if (!$this->authKeyIsValid && !$this->authKeyIsToken) {
 			// Simple call that requires Authentication - will update the key if needed.
 			$this->call('user.get', array('output' => 'userid', 'limit' => 1));
 		}
@@ -222,6 +207,12 @@ class ZabbixApi {
 		if ($this->debug) {
 			print "DBG logout(). Delete sessionFile and logout from Zabbix\n";
 		}
+		
+		// token-based sessions can't logout
+		if ($this->authKeyIsToken) {
+			return;
+		}
+
 		$response = $this->callZabbixApi('user.logout');
 		// remove session locally - ignore if session no longer exists
 		$ret = unlink($this->getSessionFile());
@@ -276,8 +267,11 @@ class ZabbixApi {
 			$response = $this->callZabbixApi($method, $params);
 		}
 		catch (\Exception $e) {
-			$this->__login();
-			$response = $this->callZabbixApi($method, $params);
+			// only try to re-login if the auth key is not a token
+			if (!$this->authKeyIsToken) {
+				$this->__login();
+				$response = $this->callZabbixApi($method, $params);
+			}
 		}
 		return $response;
 	}
@@ -582,4 +576,56 @@ class ZabbixApi {
 		return $authKey;
 	}
 
+	/**
+	 * Internal function to apply options from an associative array.
+	 */
+	protected function applyOptions($options) {
+		$validOptions = array('debug', 'sessionDir', 'sslCaFile', 'sslVerifyHost', 'sslVerifyPeer', 'useGzip', 'timeout', 'connectTimeout');
+		foreach ($options as $k => $v) {
+			if (!in_array($k, $validOptions)) {
+				throw new \Exception("Invalid option used. option:$k", ZabbixApi::EXCEPTION_CLASS_CODE);
+			}
+		}
+
+
+		if (array_key_exists('debug', $options)) {
+			$this->debug = $options['debug'] && true;
+		}
+
+		if ($this->debug) {
+			print "DBG login(). Using zabUser:$zabUser, zabUrl:$zabUrl\n";
+			print "DBG login(). Library Version:". ZabbixApi::VERSION. "\n";
+		}
+
+		if (array_key_exists('sslCaFile', $options)) {
+			if (!is_file($options['sslCaFile'])) {
+				throw new \Exception("Error - sslCaFile:". $options['sslCaFile']. " is not a valid file", ZabbixApi::EXCEPTION_CLASS_CODE);
+			}
+			$this->sslCaFile = $options['sslCaFile'];
+		}
+
+		if (array_key_exists('sslVerifyPeer', $options)) {
+			$this->sslVerifyPeer = ($options['sslVerifyPeer']) ? 1 : 0;
+		}
+
+		if (array_key_exists('sslVerifyHost', $options)) {
+			$this->sslVerifyHost = ($options['sslVerifyHost']) ? 2 : 0;
+		}
+
+		if (array_key_exists('useGzip', $options)) {
+			$this->useGzip = ($options['useGzip']) ? true : false;
+		}
+
+		if (array_key_exists('timeout', $options)) {
+			$this->timeout = (intval($options['timeout']) > 0)? $options['timeout'] : 30;
+		}
+
+		if (array_key_exists('connectTimeout', $options)) {
+			$this->timeout = (intval($options['connectTimeout']) > 0)? $options['connectTimeout'] : 30;
+		}
+
+		if ($this->debug) {
+			print "DBG login(). Using sslVerifyPeer:". $this->sslVerifyPeer . " sslVerifyHost:". $this->sslVerifyHost. " useGzip:". $this->useGzip. " timeout:". $this->timeout. " connectTimeout:". $this->connectTimeout. "\n";
+		}
+	}
 }

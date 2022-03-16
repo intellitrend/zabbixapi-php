@@ -1,6 +1,7 @@
 <?php
-namespace IntelliTrend\Zabbix;
 require_once("../src/ZabbixApi.php");
+
+use IntelliTrend\Zabbix\ZabbixApi;
 
 print "Zabbix API Example\n";
 print " Connect to API and get some hostdata as list\n";

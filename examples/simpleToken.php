@@ -4,17 +4,16 @@ require_once("../src/ZabbixApi.php");
 use IntelliTrend\Zabbix\ZabbixApi;
 
 print "Zabbix API Example\n";
-print " Connect to API, check certificate/hostname and get number of hosts\n";
+print " Connect to API using a token, check certificate/hostname and get number of hosts\n";
 print "=====================================================\n";
 
 $zabUrl ='https://my.zabbixurl.com/zabbix';
-$zabUser = 'myusername';
-$zabPassword = 'mypassword';
+$zabToken = '123456789abcdef123456789abcdef123456789abcdef123456789abcdef1234';
 
 $zbx = new ZabbixApi();
 try {
 	// default is to verify certificate and hostname
-	$zbx->login($zabUrl, $zabUser, $zabPassword);
+	$zbx->loginToken($zabUrl, $zabToken);
 	//this is similar to: $result = $zbx->call('apiinfo.version');
 	$result = $zbx->getApiVersion();
 	print "Remote Zabbix API Version:$result\n";
