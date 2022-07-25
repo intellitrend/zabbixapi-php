@@ -20,8 +20,9 @@
   *
   * Errorhandling:
   * Errors are handled by exceptions.
-  * - In case of ZabbxiApi errors, the msg and code is passed to the exception
-  * - In case of libary specfic errors, the code passed is defined by the constants: ZabbixApi::EXCEPTION_CLASS_CODE
+  * - In case of ZabbxiApi errors, the msg and code is passed to the exception class ZabbixApiException
+  * - In case of generic API errors, the code passed is defined by the constants: ZabbixApi::EXCEPTION_CLASS_CODE
+  * - In case of session specfic API errors, the code passed is defined by the constants: ZabbixApi::EXCEPTION_CLASS_CODE_SESSION
   */
 
 
@@ -38,6 +39,7 @@ class ZabbixApi {
 	const VERSION = "3.1.0";
 
 	const EXCEPTION_CLASS_CODE = 1000;
+	const EXCEPTION_CLASS_CODE_SESSION = 2000;
 	const SESSION_PREFIX = 'zbx_';
 
 	protected $zabUrl = '';
@@ -268,18 +270,30 @@ class ZabbixApi {
 		if (!$this->zabUrl) {
 			throw new ZabbixApiException("Missing Zabbix URL.", ZabbixApi::EXCEPTION_CLASS_CODE);
 		}
-		//try to call API with existing auth. on Error re-login and try again
-		try {
-			$response = $this->callZabbixApi($method, $params);
+
+		// for token-based auth, pass through to callZabbixApi
+		if ($this->authKeyIsToken) {
+			return $this->callZabbixApi($method, $params);
 		}
-		catch (\Exception $e) {
-			// only try to re-login if the auth key is not a token
-			if (!$this->authKeyIsToken) {
+
+		// for classic login, try to call API with existing auth first
+		try {
+			return $this->callZabbixApi($method, $params);
+		}
+		catch (ZabbixApiException $e) {
+			// check for session exception
+			if ($e->getCode() == ZabbixApi::EXCEPTION_CLASS_CODE_SESSION) {
+				// renew session and retry call
 				$this->__login();
-				$response = $this->callZabbixApi($method, $params);
+				return $this->callZabbixApi($method, $params);
+			} else {
+				// re-throw any other exception
+				throw $e;
 			}
 		}
-		return $response;
+
+		// technically unreachable, but just in case
+		return NULL;
 	}
 
 
@@ -334,7 +348,7 @@ class ZabbixApi {
 	protected function callZabbixApi($method, $params = array()) {
 
 		if (!$this->authKey && $method != 'user.login' && $method != 'apiinfo.version') {
-			throw new ZabbixApiException("Not logged in and no authKey", ZabbixApi::EXCEPTION_CLASS_CODE);
+			throw new ZabbixApiException("Not logged in and no authKey", ZabbixApi::EXCEPTION_CLASS_CODE_SESSION);
 		}
 
 		$request = $this->buildRequest($method, $params);
@@ -350,7 +364,6 @@ class ZabbixApi {
 			return $response['result'];
 		}
 
-		$msg = "Error without further information.";
 		if (is_array($response) && array_key_exists('error', $response)) {
 			$code = $response['error']['code'];
 			$message = $response['error']['message'];
@@ -359,6 +372,7 @@ class ZabbixApi {
 			throw new ZabbixApiException($msg, $code);
 		}
 
+		$msg = "Error without further information.";
 		throw new ZabbixApiException($msg);
 
 	}
