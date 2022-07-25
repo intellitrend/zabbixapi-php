@@ -2,6 +2,7 @@
 require_once("../src/ZabbixApi.php");
 
 use IntelliTrend\Zabbix\ZabbixApi;
+use IntelliTrend\Zabbix\ZabbixApiException;
 
 print "Zabbix API Example\n";
 print " Connect to API and get some hostdata as list\n";
@@ -59,6 +60,11 @@ try {
 
 	// logout() would logout from api and also delete the session file locally
 	//$zbx->logout();
+} catch (ZabbixApiException $e) {
+	print "==== Zabbix API Exception ===\n";
+	print 'Errorcode: '.$e->getCode()."\n";
+	print 'ErrorMessage: '.$e->getMessage()."\n";
+	exit;
 } catch (Exception $e) {
 	print "==== Exception ===\n";
 	print 'Errorcode: '.$e->getCode()."\n";

@@ -2,6 +2,7 @@
 require_once("../src/ZabbixApi.php");
 
 use IntelliTrend\Zabbix\ZabbixApi;
+use IntelliTrend\Zabbix\ZabbixApiException;
 
 print "Zabbix API Example - Create a trigger\n";
 print " Connect to API, create a trigger'\n";
@@ -32,6 +33,11 @@ try {
 
 	// print ID of the trigger that was created
 	print_r($result);
+} catch (ZabbixApiException $e) {
+	print "==== Zabbix API Exception ===\n";
+	print 'Errorcode: '.$e->getCode()."\n";
+	print 'ErrorMessage: '.$e->getMessage()."\n";
+	exit;
 } catch (Exception $e) {
 	print "==== Exception ===\n";
 	print 'Errorcode: '.$e->getCode()."\n";
