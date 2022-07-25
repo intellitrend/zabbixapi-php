@@ -27,6 +27,12 @@
 
 namespace IntelliTrend\Zabbix;
 
+class ZabbixApiException extends \Exception {
+    public function __construct($message, $code = 0, Throwable $previous = null) {
+        parent::__construct($message, $code, $previous);
+    }
+}
+
 class ZabbixApi {
 
 	const VERSION = "3.1.0";
@@ -60,7 +66,7 @@ class ZabbixApi {
 	 */
 	public function __construct() {
 		if (!function_exists('curl_init')) {
-			throw new \Exception("Missing Curl support. Install the PHP Curl module.", ZabbixApi::EXCEPTION_CLASS_CODE);
+			throw new ZabbixApiException("Missing Curl support. Install the PHP Curl module.", ZabbixApi::EXCEPTION_CLASS_CODE);
 		}
 	}
 
@@ -88,10 +94,10 @@ class ZabbixApi {
 		if (array_key_exists('sessionDir', $options)) {
 			$sessionDir = $options['sessionDir'];
 			if (!is_dir($sessionDir)) {
-				throw new \Exception("Error - sessionDir:$sessionDir is not a valid directory", ZabbixApi::EXCEPTION_CLASS_CODE);
+				throw new ZabbixApiException("Error - sessionDir:$sessionDir is not a valid directory", ZabbixApi::EXCEPTION_CLASS_CODE);
 			}
 			if (!is_writable($sessionDir)) {
-				throw new \Exception("Error - sessionDir:$sessionDir is not a writeable directory", ZabbixApi::EXCEPTION_CLASS_CODE);
+				throw new ZabbixApiException("Error - sessionDir:$sessionDir is not a writeable directory", ZabbixApi::EXCEPTION_CLASS_CODE);
 			}
 			$this->sessionDir = $sessionDir;
 		}
@@ -260,7 +266,7 @@ class ZabbixApi {
 	 */
 	public function call($method, $params = array()) {
 		if (!$this->zabUrl) {
-			throw new \Exception("Missing Zabbix URL.", ZabbixApi::EXCEPTION_CLASS_CODE);
+			throw new ZabbixApiException("Missing Zabbix URL.", ZabbixApi::EXCEPTION_CLASS_CODE);
 		}
 		//try to call API with existing auth. on Error re-login and try again
 		try {
@@ -328,7 +334,7 @@ class ZabbixApi {
 	protected function callZabbixApi($method, $params = array()) {
 
 		if (!$this->authKey && $method != 'user.login' && $method != 'apiinfo.version') {
-			throw new \Exception("Not logged in and no authKey", ZabbixApi::EXCEPTION_CLASS_CODE);
+			throw new ZabbixApiException("Not logged in and no authKey", ZabbixApi::EXCEPTION_CLASS_CODE);
 		}
 
 		$request = $this->buildRequest($method, $params);
@@ -350,10 +356,10 @@ class ZabbixApi {
 			$message = $response['error']['message'];
 			$data = $response['error']['data'];
 			$msg = "$message [$data]";
-			throw new \Exception($msg, $code);
+			throw new ZabbixApiException($msg, $code);
 		}
 
-		throw new \Exception($msg);
+		throw new ZabbixApiException($msg);
 
 	}
 
@@ -368,7 +374,7 @@ class ZabbixApi {
 	 */
 	protected function buildRequest($method, $params = array()) {
 		if ($params && !is_array($params)) {
-			throw new \Exception("Params passed to API call must be an array", ZabbixApi::EXCEPTION_CLASS_CODE);
+			throw new ZabbixApiException("Params passed to API call must be an array", ZabbixApi::EXCEPTION_CLASS_CODE);
 		}
 
 		$request = array(
@@ -450,13 +456,13 @@ class ZabbixApi {
 		$sslVerifyResult = $info['ssl_verify_result'];
 
 		if ( $httpCode == 0 || $httpCode >= 400) {
-			throw new \Exception("Request failed with HTTP-Code:$httpCode, sslVerifyResult:$sslVerifyResult. $sslErrorMsg", $httpCode);
+			throw new ZabbixApiException("Request failed with HTTP-Code:$httpCode, sslVerifyResult:$sslVerifyResult. $sslErrorMsg", $httpCode);
 		}
 
 
 		if ( $sslVerifyResult != 0 && $this->sslVerifyPeer == 1) {
 			$error = curl_error($c);
-			throw new \Exception("Request failed with SSL-Verify-Result:$sslVerifyResult. $sslErrorMsg", $sslVerifyResult);
+			throw new ZabbixApiException("Request failed with SSL-Verify-Result:$sslVerifyResult. $sslErrorMsg", $sslVerifyResult);
 		}
 
 		curl_close($c);
@@ -521,13 +527,13 @@ class ZabbixApi {
 
 		$fh = fopen($sessionFile, "w");
 		if ($fh == false) {
-			throw new \Exception("Cannot open sessionFile. sessionFile:$sessionFile", ZabbixApi::EXCEPTION_CLASS_CODE);
+			throw new ZabbixApiException("Cannot open sessionFile. sessionFile:$sessionFile", ZabbixApi::EXCEPTION_CLASS_CODE);
 		}
 
 		$encryptedKey = $this->encryptAuthKey($this->authKey);
 
 		if (fwrite($fh, $encryptedKey) == false) {
-			throw new \Exception("Cannot write encrypted authKey to sessionFile. sessionFile:$sessionFile", ZabbixApi::EXCEPTION_CLASS_CODE);
+			throw new ZabbixApiException("Cannot write encrypted authKey to sessionFile. sessionFile:$sessionFile", ZabbixApi::EXCEPTION_CLASS_CODE);
 		}
 
 		fclose($fh);
@@ -583,7 +589,7 @@ class ZabbixApi {
 		$validOptions = array('debug', 'sessionDir', 'sslCaFile', 'sslVerifyHost', 'sslVerifyPeer', 'useGzip', 'timeout', 'connectTimeout');
 		foreach ($options as $k => $v) {
 			if (!in_array($k, $validOptions)) {
-				throw new \Exception("Invalid option used. option:$k", ZabbixApi::EXCEPTION_CLASS_CODE);
+				throw new ZabbixApiException("Invalid option used. option:$k", ZabbixApi::EXCEPTION_CLASS_CODE);
 			}
 		}
 
@@ -599,7 +605,7 @@ class ZabbixApi {
 
 		if (array_key_exists('sslCaFile', $options)) {
 			if (!is_file($options['sslCaFile'])) {
-				throw new \Exception("Error - sslCaFile:". $options['sslCaFile']. " is not a valid file", ZabbixApi::EXCEPTION_CLASS_CODE);
+				throw new ZabbixApiException("Error - sslCaFile:". $options['sslCaFile']. " is not a valid file", ZabbixApi::EXCEPTION_CLASS_CODE);
 			}
 			$this->sslCaFile = $options['sslCaFile'];
 		}
