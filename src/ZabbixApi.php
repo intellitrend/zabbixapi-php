@@ -64,7 +64,7 @@ class ZabbixApi {
 	/**
 	 * Constructor
 	 * Check for required Curl module
-	 * @throws Exception $e
+	 * @throws ZabbixApiException
 	 */
 	public function __construct() {
 		if (!function_exists('curl_init')) {
@@ -80,7 +80,7 @@ class ZabbixApi {
 	 * @param string $zabUser - Zabbix user name
 	 * @param string $zabPassword - Zabbix password
 	 * @param array $options - optional settings. Example: array('sessionDir' => '/tmp', 'sslVerifyPeer' => true, 'useGzip' => true, 'debug' => true);
-	 * @throws Exception $e
+	 * @throws ZabbixApiException
 	 */
 	public function login($zabUrl, $zabUser, $zabPassword, $options = array()) {
 
@@ -134,7 +134,7 @@ class ZabbixApi {
 	 * @param string $zabUrl - Zabbix base URL
 	 * @param string $zabToken - Zabbix API token
 	 * @param array $options - optional settings. Example: array('sessionDir' => '/tmp', 'sslVerifyPeer' => true, 'useGzip' => true, 'debug' => true);
-	 * @throws Exception $e
+	 * @throws ZabbixApiException
 	 */
 	public function loginToken($zabUrl, $zabToken, $options = array()) {
 
@@ -264,7 +264,7 @@ class ZabbixApi {
 	 * @param string $method. Zabbix API method i.e. 'host.get'
 	 * @param mixed $params. Params as defined in the Zabbix API for that particular method
 	 * @return mixed $response. Decoded Json response or scalar
-	 * @throws Exception
+	 * @throws ZabbixApiException
 	 */
 	public function call($method, $params = array()) {
 		if (!$this->zabUrl) {
@@ -343,7 +343,7 @@ class ZabbixApi {
 	 * @param string $method
 	 * @param mixed $params
 	 * @return mixed $response. Json decoded response
-	 * @throws Exception
+	 * @throws ZabbixApiException
 	 */
 	protected function callZabbixApi($method, $params = array()) {
 
@@ -384,7 +384,7 @@ class ZabbixApi {
 	 * @param string $method
 	 * @param mixed $params
 	 * @return string $request. Json encoded request object
-	 * @throws Exception
+	 * @throws ZabbixApiException
 	 */
 	protected function buildRequest($method, $params = array()) {
 		if ($params && !is_array($params)) {

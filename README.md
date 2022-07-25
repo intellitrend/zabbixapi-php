@@ -344,7 +344,7 @@ Initial login. Configures the class and loads a cached session if it exists. It 
 > **Note:** If debug is enabled via option, or via function before calling `login()`, `login()` issues a call to the Zabbix-API to check wether the session is re-used.
 
 * `return` void
-* `throws` Exception $e. Invalid options, session issues or connection problems.
+* `throws` ZabbixApiException. Invalid options, session issues or connection problems.
 * `param` string $zabUrl
 * `param` string $zabUser
 * `param` string $zabPassword
@@ -368,7 +368,7 @@ Alternative login method using an API token, which is set directly as auth token
 Since session management is not required with API tokens, no cached sessions are loaded or saved.
 
 * `return` void
-* `throws` Exception $e. Invalid options, session issues or connection problems.
+* `throws` ZabbixApiException. Invalid options, session issues or connection problems.
 * `param` string $zabUrl
 * `param` string $zabToken
 * `param` array $options - optional settings.
@@ -380,7 +380,7 @@ Execute Zabbix API call. Will automatically login/re-login and retry if the call
 > **Note:** Can only be called after login() was called once before at any time.
 
 * `return` mixed $reusedSession. Decoded Json response from API call or a scalar. See Zabbix API documentation for details.
-* `throws` Exception $e. API Error, Session issues or connection problems.
+* `throws` ZabbixApiException. API Error, Session issues or connection problems.
 * `param` string $method. Zabbix API method i.e. 'host.get'
 * `param` mixed $params. Params as defined in the Zabbix API for that particular method.
 
@@ -391,7 +391,7 @@ Logout from Zabbix Server and also delete the authKey from filesystem.
 > **Note:** Only use this method if its really needed, because the session cannot be reused later on. Logouts on API object created with an API token have no effect.
 
 * `return` void
-* `throws` Exception $e. API Error, Session issues or connection problems
+* `throws` ZabbixApiException. API Error, Session issues or connection problems
 
 ### setDebug($state)
 
@@ -415,7 +415,7 @@ Get Zabbix API version from Zabbix Server. Also useful to check wether the Zabbi
 > **Note:** Prefer this function over `call('apiinfo.version')`, because it does not try to authenticate and stores the Zabbix Api version for further requests.
 
 * `return` string $version. Uses API method 'apiinfo.version'.
-* `throws` Exception $e. API Error, Session issues or connection problems
+* `throws` ZabbixApiException. API Error, Session issues or connection problems
 
 ## Utility functions
 
