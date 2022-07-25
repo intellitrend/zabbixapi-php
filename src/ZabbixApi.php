@@ -2,7 +2,7 @@
 /**
   * Zabbix PHP API Client (using the JSON-RPC Zabbix API)
   *
-  * @version 3.1.0
+  * @version 3.2.0
   * @author Wolfgang Alper <wolfgang.alper@intellitrend.de>
   * @copyright IntelliTrend GmbH, http://www.intellitrend.de
   * @license GNU Lesser General Public License v3.0
@@ -36,7 +36,7 @@ class ZabbixApiException extends \Exception {
 
 class ZabbixApi {
 
-	const VERSION = "3.1.0";
+	const VERSION = "3.2.0";
 
 	const EXCEPTION_CLASS_CODE = 1000;
 	const EXCEPTION_CLASS_CODE_SESSION = 2000;
