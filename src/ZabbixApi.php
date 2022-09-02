@@ -641,7 +641,7 @@ class ZabbixApi {
 		}
 
 		if (array_key_exists('connectTimeout', $options)) {
-			$this->timeout = (intval($options['connectTimeout']) > 0)? $options['connectTimeout'] : 30;
+			$this->connectTimeout = (intval($options['connectTimeout']) > 0)? $options['connectTimeout'] : 30;
 		}
 
 		if ($this->debug) {
