@@ -16,7 +16,7 @@ This library aims to solve those problems. It supports the following features:
 * HTTPS connections with official- and self-signed certificates.
 * Works with Linux and Windows PHP implementations.
 * Multiple concurrent connections with different user accounts and/or different servers.
-* Zabbix versions: 3.0, 3.2, 3.4, 4.0, 4.2, 4.4, 5.0, 5.2, 5.4 and 6.0.
+* Zabbix versions: 3.0 up to 7.2
 * No installation required.
 
 It is commercially backed up and maintained by [IntelliTrend GmbH](https://www.intellitrend.de), an official Zabbix Partner and Zabbix Training company.

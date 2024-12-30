@@ -15,7 +15,7 @@ Create a `composer.json` for the project:
     "name": "zabbix-api/demo",
     "description": "",
     "require": {
-        "intellitrend/zabbixapi": "v3.2.0"
+        "intellitrend/zabbixapi": "v3.3.0"
     },
     "autoload": {
         "psr-4": {

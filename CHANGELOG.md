@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 3.3.0
+
+* Added support for Zabbix 7.2.
+* Fixed `connectTimeout` setting the regular timeout instead of the connection timeout.
+
 ## Version 3.2.0
 
 * Added custom exception class ZabbixApiException.
