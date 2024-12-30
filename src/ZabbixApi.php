@@ -58,6 +58,8 @@ class ZabbixApi {
 	protected $connectTimeout = 10; //max. time in seconds to connect to server
 	protected $authKeyIsValid = false; // whether the autkey was actually successfully used in this session
 	protected $authKeyIsToken = false; // whether the autkey is a token and therefore not bound to a session
+	protected $authHeader = false; // whether the authkey should be send as header or inside the body
+	protected $userKey = ''; // name of the username field
 	protected $zabApiVersion = ''; // Zabbix API version. Updated when calling getApiVersion() or on first _login() attempt. Needed for API change in 5.4 (user -> username)
 
 
@@ -117,6 +119,9 @@ class ZabbixApi {
 
 		$sessionAuthKey = $this->readAuthKeyFromSession();
 
+		// check API version first to set version-specific flags
+		$this->getApiVersion();
+
 		// When debug is enabled, we want to see if the session has been reused. This requires a call to the Zabbix-API.
 		if ($this->debug) {
 			$this->call('user.get', array('output' => 'userid', 'limit' => 1));
@@ -156,6 +161,9 @@ class ZabbixApi {
 		$this->authKey = $zabToken;
 		$this->authKeyIsValid = true;
 		$this->authKeyIsToken = true;
+
+		// check API version first to set version-specific flags
+		$this->getApiVersion();
 	}
 
 
@@ -166,6 +174,14 @@ class ZabbixApi {
 	 */
 	public function getApiVersion() {
 		$this->zabApiVersion = $this->callZabbixApi('apiinfo.version');
+		// Zabbix version 5.4 changed key 'user' -> 'username'
+		if (version_compare($this->zabApiVersion, '5.2.0', '>')) {
+			$this->userKey = 'username';
+		} else {
+			$this->userKey = 'user';
+		}
+		// Zabbix has deprecated the auth field inside body in 6.4 and removed it in 7.2
+		$this->authHeader = version_compare($this->zabApiVersion, '6.4.0', '>');
 		return $this->zabApiVersion;
 	}
 
@@ -310,17 +326,7 @@ class ZabbixApi {
 		if ($this->debug) {
 			print "DBG __login(). Called\n";
 		}
-		// Zabbix version 5.4 changed key 'user' -> 'username'. So need to check API version upfront
-		if (!$this->zabApiVersion) {
-			// sets automatically $this->zabApiVersion
-			$this->getApiVersion();
-		}
-		if (version_compare($this->zabApiVersion, '5.4.0') < 0) {
-			$userKey = 'user';
-		} else {
-			$userKey = 'username';
-		}
-		$response = $this->callZabbixApi('user.login', array( 'password' => $this->zabPassword, $userKey => $this->zabUser));
+		$response = $this->callZabbixApi('user.login', array( 'password' => $this->zabPassword, $this->userKey => $this->zabUser));
 
 		if (isset($response) && strlen($response) == 32) {
 			$this->authKey = $response;
@@ -346,13 +352,14 @@ class ZabbixApi {
 	 * @throws ZabbixApiException
 	 */
 	protected function callZabbixApi($method, $params = array()) {
+		$authRequired = $method != 'user.login' && $method != 'apiinfo.version';
 
-		if (!$this->authKey && $method != 'user.login' && $method != 'apiinfo.version') {
+		if (!$this->authKey && $authRequired) {
 			throw new ZabbixApiException("Not logged in and no authKey", ZabbixApi::EXCEPTION_CLASS_CODE_SESSION);
 		}
 
-		$request = $this->buildRequest($method, $params);
-		$rawResponse = $this->executeRequest($this->zabUrl.'api_jsonrpc.php', $request);
+		$request = $this->buildRequest($method, $params, $authRequired && !$this->authHeader);
+		$rawResponse = $this->executeRequest($this->zabUrl.'api_jsonrpc.php', $request, $authRequired && $this->authHeader);
 
 		if ($this->debug) {
 			print "DBG callZabbixApi(). Raw response from API: $rawResponse\n";
@@ -383,28 +390,25 @@ class ZabbixApi {
 	 *
 	 * @param string $method
 	 * @param mixed $params
+	 * @param bool $useAuth. Include auth field
 	 * @return string $request. Json encoded request object
 	 * @throws ZabbixApiException
 	 */
-	protected function buildRequest($method, $params = array()) {
+	protected function buildRequest($method, $params = array(), $useAuth = true) {
 		if ($params && !is_array($params)) {
 			throw new ZabbixApiException("Params passed to API call must be an array", ZabbixApi::EXCEPTION_CLASS_CODE);
 		}
 
 		$request = array(
-			'auth' => $this->authKey,
 			'method' => $method,
 			'id' => 1,  // since we do not work in parallel, always using the same id should work
 			'params' => ( is_array($params) ? $params : array() ),
 			'jsonrpc' => "2.0"
 		);
 
-		if ($method == 'user.login') {
-			unset($request['auth']);
-		}
-
-		if ($method == 'apiinfo.version') {
-			unset($request['auth']);
+		// required up to Zabbix 6.2
+		if ($useAuth) {
+			$request['auth'] = $this->authKey;
 		}
 
 		return json_encode($request);
@@ -415,16 +419,22 @@ class ZabbixApi {
 	 * Low level execute the request
 	 *
 	 * @param string $zabUrl. Url pointing to API endpoint
+	 * @param bool $useAuth. Include authorization header
 	 * @param mixed $data.
 	 * @return string $response. Json encoded response from API
 	 */
-	protected function executeRequest($zabUrl, $data = '') {
+	protected function executeRequest($zabUrl, $data = '', $useAuth = true) {
 		$c = curl_init($zabUrl);
 		// These are required for submitting JSON-RPC requests
 
 		$headers = array();
 		$headers[]  = 'Content-Type: application/json-rpc';
 		$headers[]  = 'User-Agent: IntelliTrend/ZabbixApi;Version:'. Zabbixapi::VERSION;
+
+		// required starting with Zabbix 7.2
+		if ($useAuth) {
+			$headers[] = 'Authorization: Bearer '.$this->authKey;
+		}
 
 		$opts = array(
 			// allow to return a curl handle
@@ -613,7 +623,7 @@ class ZabbixApi {
 		}
 
 		if ($this->debug) {
-			print "DBG login(). Using zabUser:$zabUser, zabUrl:$zabUrl\n";
+			print "DBG login(). Using zabUser:$this->zabUser, zabUrl:$this->zabUrl\n";
 			print "DBG login(). Library Version:". ZabbixApi::VERSION. "\n";
 		}
 
